@@ -8,6 +8,8 @@ services:
     ports:
       - "8000:8000"
     environment:
+      - TZ=Asia/Hong_Kong
+      - LANG=en_US.utf8
       # Point to the 'ollama' service
       - OLLAMA_BASE_URL=http://ollama:11434
       # --- Other App Environment Variables ---
@@ -45,6 +47,8 @@ services:
       # Persist Ollama models and data
       - ollama_data:/root/.ollama
     environment:
+      - TZ=Asia/Hong_Kong
+      - LANG=en_US.utf8
       - NVIDIA_VISIBLE_DEVICES=all # Make GPUs visible inside container
       - NVIDIA_DRIVER_CAPABILITIES=compute,utility
       # OLLAMA_MODELS might be useful if needed, points inside volume
@@ -56,16 +60,34 @@ services:
             - driver: nvidia
               count: all
               capabilities: [gpu, compute, utility]
-    # healthcheck:
+    healthcheck:
       # Check if the Ollama API is responsive
-      # test: ["CMD", "wget", "--quiet", "--spider", "--tries=1", "--timeout=10", "http://localhost:11434/api/tags"]
-      # interval: 15s
-      # timeout: 10s
-      # retries: 12
-      # start_period: 45s # Give it time to start
+      test: ["CMD", "wget", "--quiet", "--spider", "--tries=1", "--timeout=10", "http://localhost:11434/api/tags"]
+      interval: 15s
+      timeout: 10s
+      retries: 12
+      start_period: 45s # Give it time to start
     restart: unless-stopped
 
-# Define named volumes for persistent data
+  caddy:
+    image: caddy:2.7.4-alpine
+    container_name: realtime-voice-chat-caddy
+    restart: unless-stopped
+    environment:
+      - EMAIL=alainlam.1993@gmail.com
+      - TZ=Asia/Hong_Kong
+      - LANG=en_US.utf8
+    volumes:
+      - "$HOME/.docker/caddy/Caddyfile:/etc/caddy/Caddyfile"
+      - "$HOME/.docker/caddy/sites:/etc/caddy/sites"
+      - "$HOME/.docker/caddy/data:/data"
+      - "$HOME/.docker/caddy/config:/config"
+    ports:
+      - "443:443"
+      - "80:80"
+    depends_on:
+      - app
+
 volumes:
   ollama_data:
     driver: local
